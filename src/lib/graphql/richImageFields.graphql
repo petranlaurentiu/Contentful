@@ -1,0 +1,13 @@
+fragment RichImageFields on ComponentRichImage {
+  __typename
+  internalName
+  sys {
+    id
+    spaceId
+  }
+  image {
+    ...ImageFields
+  }
+  caption
+  fullWidth
+}
