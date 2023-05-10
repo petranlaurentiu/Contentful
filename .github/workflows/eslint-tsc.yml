@@ -1,0 +1,63 @@
+# Workflow name
+name: ESLint & TSC
+
+# Event for the workflow
+on: [pull_request]
+
+# List of jobs
+jobs:
+ eslint-tsc:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Read .nvmrc
+        run: echo "##[set-output name=NVMRC;]$(cat .nvmrc)"
+        id: nvm
+
+      - name: Use Node.js (.nvmrc)
+        uses: actions/setup-node@v3
+        with:
+          node-version: "${{ steps.nvm.outputs.NVMRC }}"
+
+      - name: Get Yarn cache directory
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - name: Use Yarn cache
+        uses: actions/cache@v3.0.11
+        id: yarn-cache
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ matrix.node-version }}-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Retrieve NPM Token
+        id: vault
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ github.event.repository.name }}-github-action
+          method: jwt
+          path: github-actions
+          exportEnv: false
+          secrets: |
+            secret/data/npm/token_read NPM_TOKEN | NPM_TOKEN ;
+
+      - name: Authenticate with private NPM package
+        run: echo "//registry.npmjs.org/:_authToken=${{ steps.vault.outputs.NPM_TOKEN }}" > ~/.npmrc
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile --prefer-offline --ignore-scripts
+        # `--prefer-offline` gives cache priority
+
+      - name: ESLint
+        run: yarn lint
+
+      - name: TSC
+        run: yarn type-check
