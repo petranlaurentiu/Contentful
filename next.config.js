@@ -21,7 +21,7 @@ module.exports = withPlugins(plugins, {
    * documentation: https://nextjs.org/docs/api-reference/next.config.js/environment-variables
    */
   env: {
-    ENVIRONMENT_NAME: process.env.ENVIRONMENT_NAME,
+    ENVIRONMENT_NAME: process.env.local,
   },
 
   /**
